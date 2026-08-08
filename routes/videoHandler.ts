@@ -68,13 +68,20 @@ export const promotionVideo = () => {
       const pug = (await import('pug')).default
       const fn = pug.compile(template)
       let compiledTemplate = fn()
-      compiledTemplate = compiledTemplate.replace('<script id="subtitle"></script>', '<script id="subtitle" type="text/vtt" data-label="English" data-lang="en">' + subs + '</script>')
+      compiledTemplate = compiledTemplate.replace('<script id="subtitle"></script>', '<script id="subtitle" type="text/vtt" data-label="English" data-lang="en">' + neutralizeScriptClosings(subs) + '</script>')
       res.send(compiledTemplate)
     })
   }
   function favicon () {
     return utils.extractFilename(config.get('application.favicon'))
   }
+}
+
+/* A script element is a raw-text element: it ends at the first "</script", so subtitle data
+   containing one would break out of the block and be parsed as markup. WebVTT never
+   legitimately contains a closing script tag, so removing it is lossless for real subtitles. */
+export function neutralizeScriptClosings (text: string) {
+  return text.replace(/<\/script/gi, '')
 }
 
 function getSubsFromFile () {
