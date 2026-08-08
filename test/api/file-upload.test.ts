@@ -61,20 +61,24 @@ void describe('/file-upload', () => {
   })
 
   if (utils.isChallengeEnabled(challenges.xxeFileDisclosureChallenge) || utils.isChallengeEnabled(challenges.xxeDosChallenge)) {
-    void it('POST file type XML with XXE attack against Windows', async () => {
+    void it('POST file type XML with XXE attack against Windows discloses nothing', async () => {
       const file = path.resolve(__dirname, '../files/xxeForWindows.xml')
       const res = await request(app)
         .post('/file-upload')
         .attach('file', file)
       assert.equal(res.status, 410)
+      // Entity was not substituted, so no system.ini content reaches the response
+      assert.ok(!utils.matchesSystemIniFile(res.text), 'system.ini content must not be disclosed')
     })
 
-    void it('POST file type XML with XXE attack against Linux', async () => {
+    void it('POST file type XML with XXE attack against Linux discloses nothing', async () => {
       const file = path.resolve(__dirname, '../files/xxeForLinux.xml')
       const res = await request(app)
         .post('/file-upload')
         .attach('file', file)
       assert.equal(res.status, 410)
+      // Entity was not substituted, so no /etc/passwd content reaches the response
+      assert.ok(!/root:.*:0:0:/.test(res.text), '/etc/passwd content must not be disclosed')
     })
 
     void it('POST file type XML with Billion Laughs attack is caught by parser', async () => {
