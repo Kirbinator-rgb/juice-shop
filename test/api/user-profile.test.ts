@@ -51,4 +51,32 @@ void describe('/profile', () => {
 
     assert.equal(res.status, 302)
   })
+
+  void it('GET Content-Security-Policy is static and not influenced by user data', async () => {
+    const res = await request(app)
+      .get('/profile')
+      .set(authHeader)
+
+    assert.equal(res.status, 200)
+    const csp = res.headers['content-security-policy']
+    assert.equal(csp, "img-src 'self'; script-src 'self'")
+    assert.ok(!csp.includes('unsafe-inline'), 'CSP must not allow inline scripts')
+    assert.ok(!csp.includes('unsafe-eval'), 'CSP must not allow eval')
+  })
+
+  void it('POST username containing a template expression is not evaluated', async () => {
+    const update = await request(app)
+      .post('/profile')
+      .set('Cookie', authHeader.Cookie)
+      .field('username', '#{7*7}')
+      .redirects(0)
+    assert.equal(update.status, 302)
+
+    const res = await request(app)
+      .get('/profile')
+      .set(authHeader)
+    assert.equal(res.status, 200)
+    // 49 would mean the expression was evaluated server-side
+    assert.ok(!res.text.includes('49'), 'template expression must not be evaluated')
+  })
 })
