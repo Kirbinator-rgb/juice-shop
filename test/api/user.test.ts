@@ -9,9 +9,7 @@ import request from 'supertest'
 import type { Express } from 'express'
 import { createTestApp } from './helpers/setup'
 import { login } from './helpers/auth'
-import { challenges } from '../../data/datacache'
 import * as security from '../../lib/insecurity'
-import * as utils from '../../lib/utils'
 
 let app: Express
 let authHeader: Record<string, string>
@@ -177,20 +175,19 @@ void describe('/api/Users', () => {
     assert.equal(res.body.data.role, 'customer')
   })
 
-  if (utils.isChallengeEnabled(challenges.persistedXssUserChallenge)) {
-    void it('POST new user with XSS attack in email address', async () => {
-      const res = await request(app)
-        .post('/api/Users')
-        .set(jsonHeader)
-        .send({
-          email: '<iframe src="javascript:alert(`xss`)">',
-          password: 'does.not.matter'
-        })
-      assert.equal(res.status, 201)
-      assert.ok(res.headers['content-type']?.includes('application/json'))
-      assert.equal(res.body.data.email, '<iframe src="javascript:alert(`xss`)">')
-    })
-  }
+  void it('POST new user with XSS attack in email address stores it sanitized', async () => {
+    const res = await request(app)
+      .post('/api/Users')
+      .set(jsonHeader)
+      .send({
+        email: '<iframe src="javascript:alert(`xss`)">',
+        password: 'does.not.matter'
+      })
+    assert.equal(res.status, 201)
+    assert.ok(res.headers['content-type']?.includes('application/json'))
+    assert.ok(!res.body.data.email.includes('<iframe'), 'iframe markup must not be stored')
+    assert.ok(!res.body.data.email.includes('javascript:'), 'javascript: URL must not be stored')
+  })
 })
 
 void describe('/api/Users/:id', () => {
