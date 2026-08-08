@@ -10,9 +10,23 @@ const web3WalletAddress = '0x413744D59d31AFDC2889aeE602636177805Bd7b0'
 const walletsConnected = new Set()
 let isEventListenerCreated = false
 
+/* An EVM address is always 20 hex-encoded bytes. Anything else cannot correspond to a real
+   wallet, so rejecting it keeps unvalidated client input out of the tracking set entirely. */
+const EVM_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
+/* The set is only ever added to, so an unauthenticated caller could otherwise grow it
+   without bound and exhaust memory. */
+const MAX_TRACKED_WALLETS = 1000
+
 export function contractExploitListener () {
   return async (req: Request, res: Response) => {
     const metamaskAddress = req.body.walletAddress
+    if (typeof metamaskAddress !== 'string' || !EVM_ADDRESS_PATTERN.test(metamaskAddress)) {
+      res.status(400).json({ success: false, message: 'Invalid wallet address' })
+      return
+    }
+    if (walletsConnected.size >= MAX_TRACKED_WALLETS) {
+      walletsConnected.clear()
+    }
     walletsConnected.add(metamaskAddress)
     try {
       if (!isEventListenerCreated) {

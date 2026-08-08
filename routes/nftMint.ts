@@ -35,10 +35,17 @@ export function nftMintListener () {
   }
 }
 
+/* An EVM address is always 20 hex-encoded bytes; anything else cannot name a real wallet. */
+const EVM_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/
+
 export function walletNFTVerify () {
   return (req: Request, res: Response) => {
     try {
       const metamaskAddress = req.body.walletAddress
+      if (typeof metamaskAddress !== 'string' || !EVM_ADDRESS_PATTERN.test(metamaskAddress)) {
+        res.status(400).json({ success: false, message: 'Invalid wallet address' })
+        return
+      }
       if (addressesMinted.has(metamaskAddress)) {
         addressesMinted.delete(metamaskAddress)
         challengeUtils.solveIf(challenges.nftMintChallenge, () => true)
