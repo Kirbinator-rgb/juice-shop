@@ -8,6 +8,15 @@ import { type Request, type Response } from 'express'
 import { challenges } from '../data/datacache'
 import * as security from '../lib/insecurity'
 
+// Only these user attributes may ever be returned by this endpoint. Anything else
+// (password, totpSecret, role, ...) stays server-side regardless of what is requested.
+const ALLOWED_FIELDS = ['id', 'email', 'lastLoginIp', 'profileImage'] as const
+type AllowedField = typeof ALLOWED_FIELDS[number]
+
+function isAllowedField (field: string): field is AllowedField {
+  return (ALLOWED_FIELDS as readonly string[]).includes(field)
+}
+
 export function retrieveLoggedInUser () {
   return (req: Request, res: Response) => {
     let user
@@ -25,10 +34,13 @@ export function retrieveLoggedInUser () {
         let baseUser: any = {}
 
         if (requestedFields.length > 0) {
-          // When fields are specified, return only those fields
+          // When fields are specified, return only those of them that are allow-listed.
+          // Requesting an unknown or sensitive field is silently ignored rather than echoed back.
           for (const field of requestedFields) {
-            if (user?.data[field as keyof typeof user.data] !== undefined) {
-              baseUser[field] = user?.data[field as keyof typeof user.data]
+            if (!isAllowedField(field)) continue
+            const value = user?.data[field]
+            if (value !== undefined) {
+              baseUser[field] = value
             }
           }
         } else {
