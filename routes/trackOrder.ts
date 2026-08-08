@@ -11,11 +11,14 @@ import { challenges } from '../data/datacache'
 
 export function trackOrder () {
   return (req: Request, res: Response) => {
-    // Truncate id to avoid unintentional RCE
-    const id = !utils.isChallengeEnabled(challenges.reflectedXssChallenge) ? String(req.params.id).replace(/[^\w-]+/g, '') : utils.trunc(req.params.id, 60)
+    // An order id only ever contains word characters and hyphens. Stripping everything
+    // else removes the query-injection vector and any markup that would otherwise be
+    // reflected straight back to the client.
+    const id = String(req.params.id).replace(/[^\w-]+/g, '')
 
     challengeUtils.solveIf(challenges.reflectedXssChallenge, () => { return utils.contains(id, '<iframe src="javascript:alert(`xss`)">') })
-    db.ordersCollection.find({ $where: `this.orderId === '${id}'` }).then((order: any) => {
+    // Plain equality selector instead of a $where clause evaluated as JavaScript.
+    db.ordersCollection.find({ orderId: id }).then((order: any) => {
       const result = utils.queryResultToJson(order)
       challengeUtils.solveIf(challenges.noSqlOrdersChallenge, () => { return result.data.length > 1 })
       if (result.data[0] === undefined) {
