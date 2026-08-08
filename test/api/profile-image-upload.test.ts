@@ -100,6 +100,41 @@ void describe('/profile/image/url', () => {
     assert.equal(res.status, 302)
   })
 
+  for (const internalUrl of [
+    'http://127.0.0.1:3000/ftp',
+    'http://localhost:3000/ftp',
+    'http://169.254.169.254/latest/meta-data/',
+    'http://10.0.0.1/',
+    'file:///etc/passwd'
+  ]) {
+    void it(`POST profile image URL does not fetch the internal address ${internalUrl}`, async () => {
+      const { token } = await login(app, {
+        email: `jim@${config.get<string>('application.domain')}`,
+        password: 'ncc-1701'
+      })
+
+      const res = await request(app)
+        .post('/profile/image/url')
+        .set('Cookie', `token=${token}`)
+        .field('imageUrl', internalUrl)
+        .redirects(0)
+      assert.equal(res.status, 302)
+
+      // Log in again: whoami serves the in-memory snapshot taken at login, so a fresh
+      // login is needed to observe what was actually persisted.
+      const { token: freshToken } = await login(app, {
+        email: `jim@${config.get<string>('application.domain')}`,
+        password: 'ncc-1701'
+      })
+      const whoami = await request(app)
+        .get('/rest/user/whoami?fields=profileImage')
+        .set('Cookie', `token=${freshToken}`)
+      // The link is stored verbatim instead of a downloaded file, which shows the
+      // server never issued a request to the internal address.
+      assert.equal(whoami.body.user.profileImage, internalUrl)
+    })
+  }
+
   void it('POST profile image URL forbidden for anonymous user', { skip: 'FIXME runs into "socket hang up"' }, async () => {
     const res = await request(app)
       .post('/profile/image/url')
