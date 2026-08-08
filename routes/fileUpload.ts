@@ -39,10 +39,15 @@ function handleZipFileUpload ({ file }: Request, res: Response, next: NextFuncti
               .pipe(unzipper.Parse())
               .on('entry', function (entry: any) {
                 const fileName = entry.path
-                const absolutePath = path.resolve('uploads/complaints/' + fileName)
+                const uploadDir = path.resolve('uploads/complaints')
+                const absolutePath = path.resolve(uploadDir, fileName)
                 challengeUtils.solveIf(challenges.fileWriteChallenge, () => { return absolutePath === path.resolve('ftp/legal.md') })
-                if (absolutePath.includes(path.resolve('.'))) {
-                  entry.pipe(fs.createWriteStream('uploads/complaints/' + fileName).on('error', function (err) { next(err) }))
+                // The entry must land strictly inside the upload directory. Checking that
+                // the resolved path merely contained the project root was not enough: a
+                // "../../ftp/legal.md" entry still resolves to a path under the root.
+                const relative = path.relative(uploadDir, absolutePath)
+                if (relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative)) {
+                  entry.pipe(fs.createWriteStream(absolutePath).on('error', function (err) { next(err) }))
                 } else {
                   entry.autodrain()
                 }
