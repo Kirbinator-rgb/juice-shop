@@ -25,16 +25,23 @@ const jsonHeader = { 'content-type': 'application/json' }
 void describe('/api/Users', () => {
   void it('GET all users is forbidden via public API', async () => {
     const res = await request(app).get('/api/Users')
-    assert.equal(res.status, 401)
+    assert.equal(res.status, 403)
   })
 
-  void it('GET all users', async () => {
+  void it('GET all users is forbidden for a non-admin token', async () => {
     const res = await request(app).get('/api/Users').set(authHeader)
+    assert.equal(res.status, 403)
+  })
+
+  void it('GET all users is allowed for an admin', async () => {
+    const { token } = await login(app, { email: 'admin@juice-sh.op', password: 'admin123' })
+    const res = await request(app).get('/api/Users').set({ Authorization: `Bearer ${token}` })
     assert.equal(res.status, 200)
   })
 
   void it('GET all users doesnt include passwords', async () => {
-    const res = await request(app).get('/api/Users').set(authHeader)
+    const { token } = await login(app, { email: 'admin@juice-sh.op', password: 'admin123' })
+    const res = await request(app).get('/api/Users').set({ Authorization: `Bearer ${token}` })
     assert.equal(res.status, 200)
     for (const user of res.body.data) {
       assert.equal(user.password, undefined)
@@ -193,7 +200,12 @@ void describe('/api/Users', () => {
 void describe('/api/Users/:id', () => {
   void it('GET existing user by id is forbidden via public API', async () => {
     const res = await request(app).get('/api/Users/1')
-    assert.equal(res.status, 401)
+    assert.equal(res.status, 403)
+  })
+
+  void it('GET existing user by id is forbidden for a non-admin token', async () => {
+    const res = await request(app).get('/api/Users/1').set(authHeader)
+    assert.equal(res.status, 403)
   })
 
   void it('PUT update existing user is forbidden via public API', async () => {
@@ -209,8 +221,9 @@ void describe('/api/Users/:id', () => {
     assert.equal(res.status, 401)
   })
 
-  void it('GET existing user by id', async () => {
-    const res = await request(app).get('/api/Users/1').set(authHeader)
+  void it('GET existing user by id is allowed for an admin', async () => {
+    const { token } = await login(app, { email: 'admin@juice-sh.op', password: 'admin123' })
+    const res = await request(app).get('/api/Users/1').set({ Authorization: `Bearer ${token}` })
     assert.equal(res.status, 200)
   })
 

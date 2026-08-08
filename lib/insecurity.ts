@@ -161,6 +161,20 @@ export const isAccounting = () => {
   }
 }
 
+/* isAuthorized() only verifies that a JWT is validly signed, so it grants every logged-in
+   customer the same access. Administrative data needs a role check on the server: a guard
+   in the Angular client is a navigation aid, not an access control. */
+export const isAdmin = () => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const decodedToken = verify(utils.jwtFrom(req)) && decode(utils.jwtFrom(req))
+    if (decodedToken?.data?.role === roles.admin) {
+      next()
+    } else {
+      res.status(403).json({ error: 'Malicious activity detected' })
+    }
+  }
+}
+
 export const isDeluxe = (req: Request) => {
   const decodedToken = verify(utils.jwtFrom(req)) && decode(utils.jwtFrom(req))
   return decodedToken?.data?.role === roles.deluxe && decodedToken?.data?.deluxeToken && decodedToken?.data?.deluxeToken === deluxeToken(decodedToken?.data?.email)
