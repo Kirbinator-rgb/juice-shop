@@ -80,12 +80,24 @@ describe('/', () => {
   })
 
   describe('challenge "accessLogDisclosure"', () => {
-    it("should be able to access today's access log file", () => {
+    it("should no longer be able to access today's access log file", () => {
       // cy.visit requires a text/html response hence cy.request has been used
       cy.task<Date>('toISO8601').then((date: Date) => {
-        cy.request(`/support/logs/access.log.${date.toString()}`)
+        cy.request({
+          url: `/support/logs/access.log.${date.toString()}`,
+          failOnStatusCode: false
+        }).then((res) => {
+          // Falls through to the Angular client, so the log file itself is never sent
+          expect(res.headers['content-type']).to.contain('text/html')
+        })
       })
-      cy.expectChallengeSolved({ challenge: 'Access Log' })
+    })
+
+    it('should no longer be able to browse the log directory listing', () => {
+      cy.request({ url: '/support/logs', failOnStatusCode: false }).then((res) => {
+        expect(res.headers['content-type']).to.contain('text/html')
+        expect(res.body).to.not.contain('access.log')
+      })
     })
   })
 })

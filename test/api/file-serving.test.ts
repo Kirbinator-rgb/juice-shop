@@ -201,10 +201,17 @@ void describe('Hidden URL', () => {
     assert.equal(res.status, 200)
   })
 
-  void it('GET folder containing access log files for "Access Log" challenge', async () => {
+  void it('GET access log file is no longer served for "Access Log" challenge', async () => {
     const res = await request(app)
       .get('/support/logs/access.log.' + utils.toISO8601(new Date()))
-    assert.equal(res.status, 200)
-    assert.ok(res.headers['content-type']?.includes('application/octet-stream'))
+    // Falls through to the Angular client, so the log file itself is never sent
+    assert.ok(res.headers['content-type']?.includes('text/html'))
+    assert.ok(!res.headers['content-type']?.includes('application/octet-stream'))
+  })
+
+  void it('GET access log directory listing is no longer served for "Access Log" challenge', async () => {
+    const res = await request(app).get('/support/logs')
+    assert.ok(res.headers['content-type']?.includes('text/html'))
+    assert.ok(!res.text.includes('access.log'))
   })
 })
