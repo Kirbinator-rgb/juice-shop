@@ -29,6 +29,32 @@ void describe('/api/Feedbacks', () => {
     assert.equal(res.status, 200)
   })
 
+  void it('POST cannot replay a solved CAPTCHA for a second feedback', async () => {
+    const captchaRes = await request(app)
+      .get('/rest/captcha')
+    assert.equal(captchaRes.status, 200)
+
+    const payload = {
+      comment: 'First submission using this captcha.',
+      rating: 1,
+      captchaId: captchaRes.body.captchaId,
+      captcha: captchaRes.body.answer
+    }
+
+    const first = await request(app)
+      .post('/api/Feedbacks')
+      .set(jsonHeader)
+      .send(payload)
+    assert.equal(first.status, 201)
+
+    // The same solved captcha must not work again
+    const second = await request(app)
+      .post('/api/Feedbacks')
+      .set(jsonHeader)
+      .send({ ...payload, comment: 'Replayed submission.' })
+    assert.equal(second.status, 401)
+  })
+
   void it('POST sanitizes unsafe HTML from comment', async () => {
     const captchaRes = await request(app)
       .get('/rest/captcha')
