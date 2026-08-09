@@ -1,6 +1,6 @@
 -
   email: admin
-  password: 'admin123'
+  password: 'qF7!zR2%vLd9^TbXm4Ns8@KpWj3Ec6Yu'
   key: admin
   role: 'admin'
   securityQuestion:
@@ -28,7 +28,7 @@
       expYear: 2086
 -
   email: jim
-  password: 'ncc-1701'
+  password: 'Hs4@wNq7!Zx2Vb9^Tm5Kd8Rj3Yc6Lp0'
   key: jim
   role: 'customer'
   walletBalance: 100
@@ -60,7 +60,7 @@
       expYear: 2099
 -
   email: bender
-  password: 'OhG0dPlease1nsertLiquor!'
+  password: 'Zt6#nQ9%Rw3Vx8@Lk2Md7^Bs5Yp4Hc1'
   key: bender
   role: 'customer'
   securityQuestion:
